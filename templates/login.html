@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sign in — AI vs AI</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="dot dot-claude"></span><span class="dot dot-chatgpt"></span>
+      <h1>AI&nbsp;vs&nbsp;AI</h1>
+    </div>
+    <p class="tagline">Sign in to continue.</p>
+  </header>
+
+  <main style="max-width: 420px;">
+    <section class="panel">
+      <form id="login-form">
+        <label class="field">
+          <span>Username</span>
+          <input id="username" type="text" autocomplete="username" autofocus />
+        </label>
+        <label class="field">
+          <span>Password</span>
+          <input id="password" type="password" autocomplete="current-password" required />
+        </label>
+        <div class="controls-row">
+          <button id="login-btn" type="submit" class="primary">Sign in</button>
+        </div>
+        <p id="login-error" class="error hidden"></p>
+      </form>
+    </section>
+  </main>
+
+  <script>
+    var form = document.getElementById("login-form");
+    var err = document.getElementById("login-error");
+    var btn = document.getElementById("login-btn");
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      err.classList.add("hidden");
+      btn.disabled = true; btn.textContent = "Signing in…";
+      fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: document.getElementById("username").value,
+          password: document.getElementById("password").value,
+        }),
+      })
+        .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+        .then(function (res) {
+          if (!res.ok) throw new Error(res.j.error || "Sign in failed.");
+          window.location.href = "/";
+        })
+        .catch(function (e2) {
+          err.textContent = e2.message; err.classList.remove("hidden");
+        })
+        .finally(function () { btn.disabled = false; btn.textContent = "Sign in"; });
+    });
+  </script>
+</body>
+</html>

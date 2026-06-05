@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI vs AI — Live Debate</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <!-- Optional pretty markdown rendering; the app works fine without it. -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="dot dot-claude"></span><span class="dot dot-chatgpt"></span>
+      <h1>AI&nbsp;vs&nbsp;AI</h1>
+    </div>
+    <p class="tagline">Two models discuss your topic, challenge each other, and try to reach a conclusion.</p>
+    <nav class="tabs">
+      <a href="/" class="tab {{ 'active' if page=='debate' }}">Debate</a>
+      <a href="/analytics" class="tab {{ 'active' if page=='analytics' }}">Analytics</a>
+    </nav>
+    {% if auth_enabled %}
+    <div class="userbar">
+      <span class="user-name">Signed in as <strong>{{ current_user }}</strong></span>
+      <button id="logout-btn" class="ghost" type="button">Sign out</button>
+    </div>
+    {% endif %}
+  </header>
+
+  <main>
+    <!-- ===== Setup panel ===== -->
+    <section id="setup" class="panel">
+      <form id="start-form">
+        <label class="field">
+          <span>Topic to discuss</span>
+          <textarea id="topic" rows="2" placeholder="e.g. Is nuclear power essential for decarbonising the grid?" required></textarea>
+        </label>
+
+        <div class="grid-two">
+          <fieldset class="vendor vendor-claude">
+            <legend>Claude (Anthropic)</legend>
+            {% if not managed_keys %}
+            <label class="field">
+              <span>API key {% if keys_loaded.claude %}<em class="from-env">loaded from .env</em>{% endif %}</span>
+              <input id="claude_key" type="password" autocomplete="off"
+                     placeholder="{% if keys_loaded.claude %}using .env key — leave blank{% else %}sk-ant-...{% endif %}"
+                     {% if not keys_loaded.claude %}required{% endif %} />
+            </label>
+            {% endif %}
+            <label class="field">
+              <span>Model</span>
+              <div class="model-row">
+                <select id="claude_model" data-default="{{ default_models.claude }}">
+                  <option value="{{ default_models.claude }}">{{ default_models.claude }}</option>
+                </select>
+                <button type="button" class="icon-btn" data-reload="claude" title="Load models from Anthropic">↻</button>
+              </div>
+              <span class="model-hint" id="claude_model_hint"></span>
+            </label>
+          </fieldset>
+
+          <fieldset class="vendor vendor-chatgpt">
+            <legend>ChatGPT (OpenAI)</legend>
+            {% if not managed_keys %}
+            <label class="field">
+              <span>API key {% if keys_loaded.chatgpt %}<em class="from-env">loaded from .env</em>{% endif %}</span>
+              <input id="chatgpt_key" type="password" autocomplete="off"
+                     placeholder="{% if keys_loaded.chatgpt %}using .env key — leave blank{% else %}sk-...{% endif %}"
+                     {% if not keys_loaded.chatgpt %}required{% endif %} />
+            </label>
+            {% endif %}
+            <label class="field">
+              <span>Model</span>
+              <div class="model-row">
+                <select id="chatgpt_model" data-default="{{ default_models.chatgpt }}">
+                  <option value="{{ default_models.chatgpt }}">{{ default_models.chatgpt }}</option>
+                </select>
+                <button type="button" class="icon-btn" data-reload="chatgpt" title="Load models from OpenAI">↻</button>
+              </div>
+              <span class="model-hint" id="chatgpt_model_hint"></span>
+            </label>
+          </fieldset>
+        </div>
+
+        <div class="controls-row">
+          <label class="field inline">
+            <span>Who starts</span>
+            <select id="starter">
+              <option value="claude">Claude</option>
+              <option value="chatgpt">ChatGPT</option>
+            </select>
+          </label>
+          <label class="field inline">
+            <span>Max rounds</span>
+            <input id="max_rounds" type="number" min="1" max="12" value="6" />
+          </label>
+          {% if not managed_keys %}
+          <label class="checkbox">
+            <input id="validate" type="checkbox" checked />
+            <span>Verify keys before starting</span>
+          </label>
+          {% endif %}
+          <button id="start-btn" type="submit" class="primary">Start debate</button>
+        </div>
+
+        {% if managed_keys %}
+        <p class="privacy">🔑 This deployment uses the host's API keys — just pick your models and a topic.</p>
+        {% else %}
+        <p class="privacy">🔒 Keys are held in memory only for this session and never stored on disk.</p>
+        {% endif %}
+        <p id="setup-error" class="error hidden"></p>
+      </form>
+    </section>
+
+    <!-- ===== History panel ===== -->
+    <section id="history-panel" class="panel">
+      <div class="history-head">
+        <h2>Past debates</h2>
+        <button id="history-refresh" class="ghost" type="button">Refresh</button>
+      </div>
+      <ul id="history-list" class="history-list"></ul>
+      <p id="history-empty" class="muted-note hidden">No past debates yet — start one above.</p>
+    </section>
+
+    <!-- ===== Conversation panel ===== -->
+    <section id="conversation" class="panel hidden">
+      <div class="convo-header">
+        <div>
+          <span class="label">Topic</span>
+          <h2 id="topic-display"></h2>
+        </div>
+        <div class="convo-actions">
+          <span id="status" class="status"></span>
+          <button id="stop-btn" class="ghost">Stop</button>
+          <button id="reset-btn" class="ghost hidden">New debate</button>
+        </div>
+      </div>
+
+      <div class="thread-wrap">
+        <div id="thread" class="thread"></div>
+        <button id="jump-btn" class="jump hidden">Jump to latest ↓</button>
+      </div>
+
+      <!-- Follow-up question to both AIs; revealed once the debate ends. -->
+      <form id="comment-form" class="comment-bar hidden">
+        <input id="comment-input" type="text" autocomplete="off"
+               placeholder="Ask Claude and ChatGPT a follow-up question…" />
+        <button type="submit" class="primary">Ask both</button>
+      </form>
+    </section>
+  </main>
+
+  <script>window.KEYS_LOADED = {{ keys_loaded|tojson }};</script>
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

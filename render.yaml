@@ -1,0 +1,40 @@
+# Render blueprint. Commit this and point Render at the repo (New + → Blueprint),
+# or create a Web Service manually using the build/start commands below.
+#
+# IMPORTANT about the disk: a persistent disk (for the SQLite history DB) requires
+# a PAID instance type. On the FREE plan, delete the `disk:` block AND the
+# DEBATE_DB env var — the app still runs, but history resets on each restart/deploy.
+#
+# A single worker is intentional: sessions live in memory and must be shared
+# between the /api/start, /api/stream and follow-up requests. Do not scale to
+# multiple workers/instances without moving sessions to Redis first.
+services:
+  - type: web
+    name: ai-vs-ai
+    runtime: python
+    plan: starter            # change to 'free' if you remove the disk block below
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --workers 1 --threads 16 --timeout 0 --bind 0.0.0.0:$PORT
+    healthCheckPath: /healthz
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: COOKIE_SECURE          # send the session cookie over HTTPS only
+        value: "1"
+      - key: SECRET_KEY             # signs the login cookie
+        generateValue: true
+      - key: DEBATE_DB              # store history on the persistent disk
+        value: /var/data/debates.db
+      - key: MANAGED_KEYS           # public mode: always use the host's keys,
+        value: "1"                  # users never enter their own
+      # --- set these as secrets in the Render dashboard (sync:false) ---
+      - key: APP_PASSWORD           # the shared login password (or use APP_USERS)
+        sync: false
+      - key: ANTHROPIC_API_KEY      # REQUIRED in managed mode — the host's Claude key
+        sync: false
+      - key: OPENAI_API_KEY         # REQUIRED in managed mode — the host's ChatGPT key
+        sync: false
+    disk:
+      name: data
+      mountPath: /var/data
+      sizeGB: 1

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Analytics — AI vs AI</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="dot dot-claude"></span><span class="dot dot-chatgpt"></span>
+      <h1>AI&nbsp;vs&nbsp;AI</h1>
+    </div>
+    <nav class="tabs">
+      <a href="/" class="tab {{ 'active' if page=='debate' }}">Debate</a>
+      <a href="/analytics" class="tab {{ 'active' if page=='analytics' }}">Analytics</a>
+    </nav>
+    {% if auth_enabled %}
+    <div class="userbar">
+      <span class="user-name">Signed in as <strong>{{ current_user }}</strong></span>
+      <button id="logout-btn" class="ghost" type="button">Sign out</button>
+    </div>
+    {% endif %}
+  </header>
+
+  <main>
+    <!-- ===== Global overview ===== -->
+    <section class="panel">
+      <h2 class="section-title">Across all debates</h2>
+      <div id="overview-cards" class="cards"></div>
+
+      <h3 class="sub-title">Head to head</h3>
+      <div id="head-to-head" class="h2h"></div>
+
+      <h3 class="sub-title">Outcomes</h3>
+      <div id="archetypes" class="chips"></div>
+    </section>
+
+    <!-- ===== Per-debate ===== -->
+    <section class="panel">
+      <h2 class="section-title">Per debate</h2>
+      <p class="muted-note" id="analytics-empty">No analysed debates yet — run one on the Debate tab.</p>
+      <ul id="debate-index" class="history-list"></ul>
+      <div id="debate-detail" class="detail hidden"></div>
+    </section>
+  </main>
+
+  <script>window.AUTH_ENABLED = {{ auth_enabled|tojson }};</script>
+  <script src="{{ url_for('static', filename='js/analytics.js') }}"></script>
+</body>
+</html>
