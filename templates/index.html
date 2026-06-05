@@ -33,7 +33,10 @@
       <form id="start-form">
         <label class="field">
           <span>Topic to discuss</span>
-          <textarea id="topic" rows="2" placeholder="e.g. Is nuclear power essential for decarbonising the grid?" required></textarea>
+          <div class="input-with-mic">
+            <textarea id="topic" rows="2" placeholder="e.g. Is nuclear power essential for decarbonising the grid?" required></textarea>
+            <button type="button" class="mic-btn" data-mic="topic" title="Dictate" aria-label="Dictate topic">🎤</button>
+          </div>
         </label>
 
         <div class="grid-two">
@@ -145,6 +148,7 @@
       <form id="comment-form" class="comment-bar hidden">
         <input id="comment-input" type="text" autocomplete="off"
                placeholder="Ask Claude and ChatGPT a follow-up question…" />
+        <button type="button" class="mic-btn" data-mic="comment-input" title="Dictate" aria-label="Dictate message">🎤</button>
         <button type="submit" class="primary">Ask both</button>
       </form>
     </section>

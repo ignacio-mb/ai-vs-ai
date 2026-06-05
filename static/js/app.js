@@ -462,6 +462,75 @@
     });
   }
 
+  /* ---------- voice input (Web Speech API) ---------- */
+
+  function initVoice() {
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    var buttons = document.querySelectorAll("[data-mic]");
+    if (!SR) {
+      // Browser doesn't support speech recognition (e.g. Firefox) — hide mics.
+      for (var i = 0; i < buttons.length; i++) buttons[i].classList.add("unsupported");
+      return;
+    }
+    for (var j = 0; j < buttons.length; j++) {
+      var btn = buttons[j];
+      var target = document.getElementById(btn.getAttribute("data-mic"));
+      if (target) wireMic(btn, target, SR);
+    }
+  }
+
+  function wireMic(btn, target, SR) {
+    var rec = null;
+    var listening = false;
+    var base = "";
+
+    function setListening(on) {
+      listening = on;
+      btn.classList.toggle("listening", on);
+      btn.title = on ? "Listening… click to stop" : "Dictate";
+    }
+
+    btn.addEventListener("click", function () {
+      if (listening) { if (rec) { try { rec.stop(); } catch (e) {} } return; }
+
+      rec = new SR();
+      rec.lang = navigator.language || "en-US";
+      rec.interimResults = true;   // live partial transcript
+      rec.continuous = false;      // auto-stops after a natural pause
+
+      // Append dictation to whatever is already in the field.
+      base = target.value ? target.value.replace(/\s+$/, "") + " " : "";
+
+      rec.onstart = function () { setListening(true); };
+      rec.onend = function () {
+        setListening(false);
+        rec = null;
+        target.focus();            // so the user can immediately press Enter
+      };
+      rec.onerror = function (e) {
+        setListening(false);
+        if (e && e.error === "not-allowed") {
+          alert("Microphone access was blocked. Allow it in your browser’s site settings to use voice input.");
+        }
+      };
+      rec.onresult = function (e) {
+        var interim = "", finalText = "";
+        for (var i = e.resultIndex; i < e.results.length; i++) {
+          var t = e.results[i][0].transcript;
+          if (e.results[i].isFinal) finalText += t;
+          else interim += t;
+        }
+        target.value = base + finalText + interim;
+        if (finalText) base += finalText;  // fold final in so it isn't re-shown
+      };
+
+      try { rec.start(); }
+      catch (err) { setListening(false); }
+    });
+  }
+
+  initVoice();
+
   /* ---------- model dropdowns (fetched live from the providers) ---------- */
 
   function optionValues(select) {
